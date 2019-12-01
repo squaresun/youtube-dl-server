@@ -16,7 +16,7 @@ app = Bottle()
 
 
 app_defaults = {
-    'YDL_FORMAT': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]',
+    'YDL_FORMAT': 'bestvideo+bestaudio/best',
     'YDL_EXTRACT_AUDIO_FORMAT': None,
     'YDL_EXTRACT_AUDIO_QUALITY': '192',
     'YDL_RECODE_VIDEO_FORMAT': None,
@@ -65,6 +65,7 @@ def q_put():
     dl_q.put((url, options))
     print("Added url " + url + " to the download queue")
     return HTTPResponse(status=200, body={"url": url, "options": options})
+
 
 
 @app.route("/youtube-dl/update", method="GET")
@@ -139,11 +140,6 @@ dl_q = Queue()
 done = False
 dl_thread = Thread(target=dl_worker)
 dl_thread.start()
-
-print("Updating youtube-dl to the newest version")
-updateResult = update()
-print(updateResult["output"])
-print(updateResult["error"])
 
 print("Started download thread")
 
