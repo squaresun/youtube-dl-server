@@ -4,7 +4,7 @@ import os
 import subprocess
 import glob
 from queue import Queue
-from bottle import route, run, Bottle, request, static_file
+from bottle import route, run, Bottle, request, static_file, HTTPResponse
 from threading import Thread
 import youtube_dl
 from pathlib import Path
@@ -44,7 +44,7 @@ def server_video_static(filename):
 
 @app.route('/youtube-dl/q', method='GET')
 def q_size():
-    return {"success": True, "size": json.dumps(list(dl_q.queue))}
+    return HTTPResponse(status=200, body={"size": json.dumps(list(dl_q.queue))})
 
 
 @app.route('/youtube-dl/q', method='POST')
@@ -55,16 +55,16 @@ def q_put():
     }
 
     if not url:
-        return {"success": False, "error": "/q called without a 'url' query param"}
+        return HTTPResponse(status=400, body={"error": "/q called without a 'url' query param"})
 
     if 'youtube.com' not in url:
         # Check if file exists
         if glob.glob(f'./{VIDEO_FOLDER}/{url}.*'):
-            return {"success": True, "url": url, "options": options, "exists": True}
+            return HTTPResponse(status=200, body={"url": url, "options": options, "exists": True})
 
     dl_q.put((url, options))
     print("Added url " + url + " to the download queue")
-    return {"success": True, "url": url, "options": options}
+    return HTTPResponse(status=200, body={"url": url, "options": options})
 
 
 @app.route("/youtube-dl/update", method="GET")
