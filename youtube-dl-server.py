@@ -57,11 +57,6 @@ def q_put():
     if not url:
         return HTTPResponse(status=400, body={"error": "/q called without a 'url' query param"})
 
-    if 'youtube.com' not in url:
-        # Check if file exists
-        if glob.glob(f'./{VIDEO_FOLDER}/{url}.*'):
-            return HTTPResponse(status=200, body={"url": url, "options": options, "exists": True})
-
     dl_q.put((url, options))
     print("Added url " + url + " to the download queue")
     return HTTPResponse(status=200, body={"url": url, "options": options})
