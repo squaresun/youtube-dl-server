@@ -10,8 +10,6 @@ import youtube_dl
 from pathlib import Path
 from collections import ChainMap
 
-VIDEO_FOLDER = 'video'
-
 app = Bottle()
 
 
@@ -20,7 +18,7 @@ app_defaults = {
     'YDL_EXTRACT_AUDIO_FORMAT': None,
     'YDL_EXTRACT_AUDIO_QUALITY': '192',
     'YDL_RECODE_VIDEO_FORMAT': None,
-    'YDL_OUTPUT_TEMPLATE': f'./{VIDEO_FOLDER}/%(id)s.%(ext)s',
+    'YDL_OUTPUT_TEMPLATE': f'./static/%(id)s.%(ext)s',
     'YDL_ARCHIVE_FILE': None,
     'YDL_SERVER_HOST': '0.0.0.0',
     'YDL_SERVER_PORT': 8080,
@@ -51,16 +49,25 @@ def q_size():
 def q_put():
     url = request.forms.get("url")
     options = {
-        'format': request.forms.get("format")
+        'format': request.forms.get("format"),
+        # Boolean for returning extension of downloading file
+        'ret_ext': request.forms.get("ret_ext", False)
     }
 
     if not url:
         return HTTPResponse(status=400, body={"error": "/q called without a 'url' query param"})
 
-    dl_q.put((url, options))
+    ydl_opt = get_ydl_options(options)
+    dl_q.put((url, ydl_opt))
     print("Added url " + url + " to the download queue")
-    return HTTPResponse(status=200, body={"url": url, "options": options})
 
+    if not options['ret_ext']:
+        return HTTPResponse(status=200, body={"url": url, "options": options})
+
+    with youtube_dl.YoutubeDL(ydl_opt) as ydl:
+        info = ydl.extract_info(url, download=False)
+        filename = ydl.prepare_filename(info)
+        return HTTPResponse(status=200, body={"url": url, "options": options, "ext": os.path.splitext(filename)[1]})
 
 
 @app.route("/youtube-dl/update", method="GET")
@@ -125,7 +132,7 @@ def get_ydl_options(request_options):
 
 def download(url, request_options):
     try:
-        with youtube_dl.YoutubeDL(get_ydl_options(request_options)) as ydl:
+        with youtube_dl.YoutubeDL(request_options) as ydl:
             ydl.download([url])
     except:
         pass
