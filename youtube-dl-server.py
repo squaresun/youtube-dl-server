@@ -27,6 +27,11 @@ app_defaults = {
 
 @app.route('/youtube-dl/static/:filename#.*#')
 def server_static(filename):
+    # check if file extension is omitted
+    if len(os.path.splitext(filename)[1]) == 0:
+        # find static file without extension
+        for file in glob.glob(f'./static/{filename}.*'):
+            filename = os.path.basename(file)
     return static_file(filename, root='./static')
 
 
