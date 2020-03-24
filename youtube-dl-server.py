@@ -25,13 +25,23 @@ app_defaults = {
 }
 
 
-@app.route('/youtube-dl/static/:filename#.*#')
+@app.route('/youtube-dl/static/:filename#.*#', method='HEAD')
 def server_static(filename):
     # check if file extension is omitted
     if len(os.path.splitext(filename)[1]) == 0:
-        # find static file without extension
-        for file in glob.glob(f'./static/{filename}.*'):
-            filename = os.path.basename(file)
+        # use wildcard on file extension
+        filename += '.*'
+    for file in glob.glob(f'./static/{filename}'):
+        ext = os.path.splitext(os.path.basename(file))
+        # ignore .part file, which contains two dot in file path
+        if ext[0].find('.') > -1:
+            continue
+        return HTTPResponse(status=200, headers={'X-Extension': ext[1]})
+    return HTTPResponse(status=404)
+
+
+@app.route('/youtube-dl/static/:filename#.*#', method='GET')
+def server_static(filename):
     return static_file(filename, root='./static')
 
 
@@ -45,8 +55,6 @@ def q_put():
     url = request.forms.get("url")
     options = {
         'format': request.forms.get("format"),
-        # Boolean for returning extension of downloading file
-        'ret_ext': request.forms.get("ret_ext", False)
     }
 
     if not url:
@@ -55,14 +63,11 @@ def q_put():
     ydl_opt = get_ydl_options(options)
     dl_q.put((url, ydl_opt))
     print("Added url " + url + " to the download queue")
-
-    if not options['ret_ext']:
-        return HTTPResponse(status=200, body={"url": url, "options": options})
-
+    duration = -1
     with youtube_dl.YoutubeDL(ydl_opt) as ydl:
         info = ydl.extract_info(url, download=False)
-        filename = ydl.prepare_filename(info)
-        return HTTPResponse(status=200, body={"url": url, "options": options, "ext": os.path.splitext(filename)[1]})
+        duration = info['duration']
+    return HTTPResponse(status=200, body={"url": url, "options": options, "duration": duration})
 
 
 @app.route("/youtube-dl/update", method="GET")
@@ -140,7 +145,6 @@ class Progress:
     def update_progress(self, data):
         if data["status"] == "finished":
             print(f'finished: {data["filename"]}')
-            # self.finish(data["filename"])
 
         elif data["status"] == "downloading":
             if "downloaded_bytes" in data\
