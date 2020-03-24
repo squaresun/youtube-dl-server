@@ -83,6 +83,11 @@ def update():
     }
 
 
+@app.route("/youtube-dl/progress", method="GET")
+def getProgress():
+    return progress.__dict__
+
+
 def dl_worker():
     while not done:
         url, options = dl_q.get()
@@ -134,25 +139,39 @@ def get_ydl_options(request_options):
 def download(url, request_options):
     try:
         with youtube_dl.YoutubeDL(request_options) as ydl:
-            pro = Progress()
-            ydl.add_progress_hook(pro.update_progress)
+            # Refer to: https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+            # It's thread-safe on a simple assignment
+            global progress
+            progress = Progress(url, request_options)
+            ydl.add_progress_hook(progress.update)
             ydl.download([url])
     except:
         pass
 
 
 class Progress:
-    def update_progress(self, data):
+    url = ""
+    opt = {}
+    finished = False
+    downloaded = 0
+    total = 1
+
+    def __init__(self, url, opt):
+        self.url = url
+        self.opt = opt
+
+    def update(self, data):
         if data["status"] == "finished":
-            print(f'finished: {data["filename"]}')
-
+            self.downloaded = self.total
+            self.finished = True
         elif data["status"] == "downloading":
-            if "downloaded_bytes" in data\
-                    and "total_bytes" in data:
-                print(float(data["downloaded_bytes"]) /
-                      float(data["total_bytes"]))
+            if "total_bytes" in data:
+                self.total = data["total_bytes"]
+            if "downloaded_bytes" in data:
+                self.downloaded = data["downloaded_bytes"]
 
 
+progress = Progress("", {})
 dl_q = Queue()
 done = False
 dl_thread = Thread(target=dl_worker)
