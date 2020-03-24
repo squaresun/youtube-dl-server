@@ -121,16 +121,32 @@ def get_ydl_options(request_options):
         'format': ydl_vars['YDL_FORMAT'],
         'postprocessors': postprocessors,
         'outtmpl': ydl_vars['YDL_OUTPUT_TEMPLATE'],
-        'download_archive': ydl_vars['YDL_ARCHIVE_FILE']
+        'download_archive': ydl_vars['YDL_ARCHIVE_FILE'],
+        'quiet': True
     }
 
 
 def download(url, request_options):
     try:
         with youtube_dl.YoutubeDL(request_options) as ydl:
+            pro = Progress()
+            ydl.add_progress_hook(pro.update_progress)
             ydl.download([url])
     except:
         pass
+
+
+class Progress:
+    def update_progress(self, data):
+        if data["status"] == "finished":
+            print(f'finished: {data["filename"]}')
+            # self.finish(data["filename"])
+
+        elif data["status"] == "downloading":
+            if "downloaded_bytes" in data\
+                    and "total_bytes" in data:
+                print(float(data["downloaded_bytes"]) /
+                      float(data["total_bytes"]))
 
 
 dl_q = Queue()
