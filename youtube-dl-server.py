@@ -26,7 +26,7 @@ app_defaults = {
 
 
 @app.route('/youtube-dl/static/:filename#.*#', method='HEAD')
-def server_static(filename):
+def server_static_info(filename):
     # check if file extension is omitted
     if len(os.path.splitext(filename)[1]) == 0:
         # use wildcard on file extension
