@@ -5,6 +5,7 @@ import subprocess
 import glob
 from queue import Queue
 from bottle import route, run, Bottle, request, static_file, HTTPResponse
+from paste import httpserver
 from threading import Thread
 import youtube_dl
 from pathlib import Path
@@ -182,6 +183,6 @@ print("Started download thread")
 app_vars = ChainMap(os.environ, app_defaults)
 
 app.run(host=app_vars['YDL_SERVER_HOST'],
-        port=app_vars['YDL_SERVER_PORT'], debug=True)
+        port=app_vars['YDL_SERVER_PORT'], debug=True, server='paste')
 done = True
 dl_thread.join()
