@@ -46,6 +46,15 @@ def server_static(filename):
     return static_file(filename, root='./static')
 
 
+@app.route('/youtube-dl/static/:filename#.*#', method='DELETE')
+def server_static_delete(filename):
+    try:
+        os.remove(f'./static/{filename}')
+    except:
+        return HTTPResponse(status=404)
+    return HTTPResponse(status=200)
+
+
 @app.route('/youtube-dl/q', method='GET')
 def q_size():
     return HTTPResponse(status=200, body={"size": json.dumps(list(dl_q.queue))})
